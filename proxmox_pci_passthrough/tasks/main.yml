@@ -1,0 +1,23 @@
+- name: Ensure IOMMU is enabled in systemd
+  lineinfile:
+    path: "/etc/kernel/cmdline"
+    backrefs: true
+    regex: '(root=ZFS=rpool\/ROOT\/pve-1 boot=zfs)$'
+    line: '\1quiet intel_iommu=on iommu=pt'
+  register: iommu_result
+
+- name: Ensure VFIO modules are enabled at boot
+  lineinfile:
+    path: "/etc/modules"
+    line: '{{ item }}'
+  loop:
+    - vfio
+    - vfio_iommu_type1
+    - vfio_pci
+    - vfio_virqfd
+  register: vfio_result
+
+- name: If changes were made, reboot the machine
+  reboot:
+  when: iommu_result.changed or
+        vfio_result.changed
